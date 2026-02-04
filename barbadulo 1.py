@@ -46,7 +46,7 @@ class NavicellaGame(arcade.Window):
             self.crea_ostacolo()
 
     def crea_ostacolo(self):
-        ostacolo = arcade.Sprite("ostacolo.png", scale=0.4)
+        ostacolo = arcade.Sprite("ostacolo.jpg", scale=0.4)
         ostacolo.center_x = random.randint(40, SCREEN_WIDTH - 40)
         ostacolo.center_y = random.randint(SCREEN_HEIGHT, SCREEN_HEIGHT + 400)
         self.ostacoli_list.append(ostacolo)
