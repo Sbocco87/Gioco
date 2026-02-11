@@ -20,7 +20,10 @@ class NavicellaGame(arcade.Window):
         self.right_pressed = False
 
         self.velocita_player = 4
-        self.velocita_ostacoli = 2.0
+        self.velocita_ostacoli = 3.0
+
+        self.punteggio = 0
+        self.high_score = 0
 
         self.tempo_passato = 0.0
         self.game_over = False
@@ -72,7 +75,7 @@ class NavicellaGame(arcade.Window):
                 "Premi R per restart",
                 SCREEN_WIDTH // 2,
                 SCREEN_HEIGHT // 2 - 30,
-                arcade.color.RED,
+                arcade.color.GREEN,
                 18,
                 anchor_x="center",
                 anchor_y="center"
@@ -84,7 +87,7 @@ class NavicellaGame(arcade.Window):
 
         self.tempo_passato += delta_time
 
-        if int(self.tempo_passato) != 0 and int(self.tempo_passato) % 60 == 0:
+        if int(self.tempo_passato) != 0 and int(self.tempo_passato) % 10 == 0:
             self.velocita_ostacoli += 0.3
             self.tempo_passato += 1
 
