@@ -1,0 +1,284 @@
+import arcade
+import random
+import os
+
+# ======================
+# COSTANTI
+# ======================
+
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 600
+SCREEN_TITLE = "Navicella - Schiva gli ostacoli"
+
+DISTANZA_OSTACOLI = 180
+BOOST_DURATION = 5.0
+BOOST_VELOCITA = 8
+NUM_STELLE = 100
+
+
+# ======================
+# FUNZIONE SICURA CARICAMENTO SPRITE
+# (evita crash se immagini mancanti)
+# ======================
+def load_sprite_safe(path, scale):
+    if os.path.exists(path):
+        return arcade.Sprite(path, scale=scale)
+    else:
+        # sprite placeholder se manca immagine
+        sprite = arcade.SpriteSolidColor(50, 50, arcade.color.RED)
+        sprite.scale = scale
+        return sprite
+
+
+# ======================
+# GIOCO
+# ======================
+class NavicellaGame(arcade.Window):
+
+    def __init__(self, width, height, title):
+        super().__init__(width, height, title)
+
+        arcade.set_background_color(arcade.color.BLACK)
+
+        self.player = None
+        self.player_list = arcade.SpriteList()
+        self.ostacoli_list = arcade.SpriteList()
+        self.potenziamenti_list = arcade.SpriteList()
+
+        # input
+        self.up_pressed = False
+        self.down_pressed = False
+        self.left_pressed = False
+        self.right_pressed = False
+
+        # gameplay
+        self.velocita_player = 4
+        self.velocita_ostacoli = 2.0
+
+        self.tempo_passato = 0
+        self.score = 0
+        self.best_score = 0
+        self.tempo_punti = 0
+
+        # boost
+        self.boost_attivo = False
+        self.tempo_boost = 0
+        self.punti_per_boost = 30
+        self.ultimo_boost_score = 0
+
+        self.game_over = False
+
+        # stelle
+        self.stelle = []
+        for _ in range(NUM_STELLE):
+            self.stelle.append([
+                random.randint(0, SCREEN_WIDTH),
+                random.randint(0, SCREEN_HEIGHT),
+                random.randint(1, 3),
+                random.uniform(1, 3.5)
+            ])
+
+        self.setup()
+
+    # ======================
+    # SETUP
+    # ======================
+    def setup(self):
+
+        self.player_list.clear()
+        self.ostacoli_list.clear()
+        self.potenziamenti_list.clear()
+
+        self.player = load_sprite_safe("navicella.png", 0.33)
+        self.player.center_x = SCREEN_WIDTH // 2
+        self.player.center_y = 80
+        self.player_list.append(self.player)
+
+        self.velocita_ostacoli = 2
+        self.velocita_player = 4
+
+        self.score = 0
+        self.tempo_punti = 0
+        self.tempo_passato = 0
+
+        self.boost_attivo = False
+        self.tempo_boost = 0
+        self.ultimo_boost_score = 0
+
+        self.game_over = False
+
+        y_spawn = SCREEN_HEIGHT + 100
+        for _ in range(5):
+            ost = load_sprite_safe("ostacolo.png", 0.4)
+            ost.center_x = random.randint(40, SCREEN_WIDTH - 40)
+            ost.center_y = y_spawn
+            self.ostacoli_list.append(ost)
+            y_spawn += DISTANZA_OSTACOLI
+
+    # ======================
+    # DISEGNO
+    # ======================
+    def on_draw(self):
+        self.clear()
+
+        # stelle
+        for s in self.stelle:
+            arcade.draw_circle_filled(s[0], s[1], s[2], arcade.color.WHITE)
+
+        self.ostacoli_list.draw()
+        self.player_list.draw()
+        self.potenziamenti_list.draw()
+
+        arcade.draw_text(f"Score: {self.score}", 10, 570,
+                         arcade.color.WHITE, 16)
+
+        arcade.draw_text(f"Best: {self.best_score}", 10, 545,
+                         arcade.color.YELLOW, 16)
+
+        if self.game_over:
+            arcade.draw_text("GAME OVER",
+                             SCREEN_WIDTH//2,
+                             SCREEN_HEIGHT//2,
+                             arcade.color.RED,
+                             40,
+                             anchor_x="center")
+
+            arcade.draw_text("Premi R per restart",
+                             SCREEN_WIDTH//2,
+                             SCREEN_HEIGHT//2 - 40,
+                             arcade.color.GREEN,
+                             18,
+                             anchor_x="center")
+
+    # ======================
+    # UPDATE
+    # ======================
+    def on_update(self, delta_time):
+
+        if self.game_over:
+            return
+
+        # stelle movimento
+        for s in self.stelle:
+            s[1] -= s[3]
+            if s[1] < 0:
+                s[0] = random.randint(0, SCREEN_WIDTH)
+                s[1] = SCREEN_HEIGHT
+
+        # punteggio
+        self.tempo_punti += delta_time
+        if self.tempo_punti >= 3:
+            self.score += 10
+            self.tempo_punti = 0
+
+        # aumento difficoltà
+        self.tempo_passato += delta_time
+        if int(self.tempo_passato) % 60 == 0 and int(self.tempo_passato) != 0:
+            self.velocita_ostacoli += 0.7
+            self.tempo_passato += 1
+
+        # spawn boost
+        if self.score - self.ultimo_boost_score >= self.punti_per_boost:
+            self.ultimo_boost_score = self.score
+            boost = load_sprite_safe("purple_potenziamento.png", 0.3)
+            boost.center_x = random.randint(40, SCREEN_WIDTH - 40)
+            boost.center_y = SCREEN_HEIGHT
+            self.potenziamenti_list.append(boost)
+
+        # movimento player
+        speed = self.velocita_player
+
+        if self.up_pressed:
+            self.player.center_y += speed
+        if self.down_pressed:
+            self.player.center_y -= speed
+        if self.left_pressed:
+            self.player.center_x -= speed
+            self.player.scale_x = -0.33
+        if self.right_pressed:
+            self.player.center_x += speed
+            self.player.scale_x = 0.33
+
+        # limiti schermo corretti
+        self.player.center_x = max(
+            self.player.width/2,
+            min(SCREEN_WIDTH - self.player.width/2, self.player.center_x)
+        )
+
+        self.player.center_y = max(
+            self.player.height/2,
+            min(SCREEN_HEIGHT - self.player.height/2, self.player.center_y)
+        )
+
+        # movimento ostacoli
+        for ost in self.ostacoli_list:
+            ost.center_y -= self.velocita_ostacoli
+
+            if ost.center_y < -50:
+                max_y = max(o.center_y for o in self.ostacoli_list)
+                ost.center_y = max_y + DISTANZA_OSTACOLI
+                ost.center_x = random.randint(40, SCREEN_WIDTH - 40)
+
+        # boost timer
+        if self.boost_attivo:
+            self.tempo_boost += delta_time
+            if self.tempo_boost >= BOOST_DURATION:
+                self.boost_attivo = False
+                self.velocita_player = 4
+
+        # raccolta boost
+        raccolti = arcade.check_for_collision_with_list(
+            self.player, self.potenziamenti_list)
+
+        for b in raccolti:
+            b.kill()
+            self.boost_attivo = True
+            self.velocita_player = BOOST_VELOCITA
+            self.tempo_boost = 0
+
+        # collisione
+        if arcade.check_for_collision_with_list(self.player,
+                                                self.ostacoli_list):
+            self.game_over = True
+            self.best_score = max(self.best_score, self.score)
+
+    # ======================
+    # INPUT
+    # ======================
+    def on_key_press(self, key, modifiers):
+
+        if self.game_over and key == arcade.key.R:
+            self.setup()
+            return
+
+        if key in (arcade.key.W, arcade.key.UP):
+            self.up_pressed = True
+        if key in (arcade.key.S, arcade.key.DOWN):
+            self.down_pressed = True
+        if key in (arcade.key.A, arcade.key.LEFT):
+            self.left_pressed = True
+        if key in (arcade.key.D, arcade.key.RIGHT):
+            self.right_pressed = True
+
+    def on_key_release(self, key, modifiers):
+
+        if key in (arcade.key.W, arcade.key.UP):
+            self.up_pressed = False
+        if key in (arcade.key.S, arcade.key.DOWN):
+            self.down_pressed = False
+        if key in (arcade.key.A, arcade.key.LEFT):
+            self.left_pressed = False
+        if key in (arcade.key.D, arcade.key.RIGHT):
+            self.right_pressed = False
+
+
+# ======================
+# MAIN
+# ======================
+def main():
+    NavicellaGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    arcade.run()
+
+
+if __name__ == "__main__":
+    main()
