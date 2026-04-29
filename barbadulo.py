@@ -222,7 +222,7 @@ class NavicellaGame(arcade.Window):
             self.player.color = arcade.color.CYAN
 
         if self.scudo_attivo:
-            self.tempo_scudo -= delta_time
+            self.tempo_scudo = self.tempo_scudo - delta_time
             if self.tempo_scudo <= 0:
                 self.scudo_attivo = False
                 self.player.color = arcade.color.WHITE
